@@ -1,0 +1,26 @@
+task: GFP
+data:
+  data_file: ./logs/smooth_GFP_evmutation_2023_09_25__16_53_50_inv_log/smoothed-2023-09-25_17-07-49.csv
+  ref_seq_fasta: data/foldx/GFP_reference_seq_aa.fasta
+  split_val_by_mutation_sites: False
+  augment_negative: True
+  label_column: target
+
+model:
+  model_type: BaseCNN
+  n_tokens: 20
+  kernel_size: 5
+  input_size: 256
+  dropout: 0.0
+  make_one_hot: True
+  activation: relu
+  linear: True
+
+train:
+  seed: 42
+  num_epochs: 10000
+  batch_size: 128
+  early_stop: 20
+  lr: 1.e-3
+  wd: 1.e-5
+  loss: MSELoss

@@ -1,0 +1,12 @@
+predictor_dir: logs_new/train_predictor_stability_0.2_0.4_2023_09_30__10_43_49
+base_pool_path: data/GFP_stability_percentile_0.2_0.4.csv
+predictor_type: BaseCNN
+rescaling: ratio 
+results_file: smoothed  
+num_eigenvalues: 50
+max_n_seqs: 2_000_000
+subsample: 0.1
+random_traversal_neighborhood: 15
+n_jobs: -1
+seed: 42
+evmutation_dist_file: null

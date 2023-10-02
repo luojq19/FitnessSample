@@ -1,0 +1,15 @@
+task: GFP
+predictor_dir: logs_new/train_predictor_GFP_0.2_0.4_2023_09_30__10_42_45
+predictor_type: BaseCNN
+csv_path: data/GFP_stability_percentile_0.2_0.4.csv
+cluster_cutoff: 500
+max_visits: 1
+max_epochs: 22
+# run_name: run_${now:%Y-%m-%d}_${now:%H-%M-%S} #IE_${run.max_epochs}  -- use this name if you don't want the date, but instead the number of epochs
+debug: False
+seed: 1
+temperature: 0.01
+gibbs_samples: 100
+verbose: False
+ckpt_name: best_checkpoints.pt
+inverse_sign: False

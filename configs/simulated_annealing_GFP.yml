@@ -1,0 +1,11 @@
+task: GFP
+simulated_annealing_temp: 0.01
+muts_per_seq_param: 1.5
+decay_rate: 0.999
+nmut_threshold: 0 # 0 means no threshold, will use int32 as threshold
+base_pool_path: data/GFP_stability_percentile_0.2_0.4.csv
+base_pool_topk: null
+base_pool_label_column: GFP
+oracle_dir: logs_new/train_smooth_GFP_2023_09_30__13_34_58
+seed: 42
+num_steps: 1000

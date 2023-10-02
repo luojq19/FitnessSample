@@ -1,0 +1,7 @@
+task: GFP
+diffusion_relaxation_tau: 0.99
+diffusion_step_size: 0.1
+num_steps: 100
+base_pool_path: data/GFP_stability_percentile_0.2_0.4.csv
+oracle_dir: logs_new/train_smooth_GFP_2023_09_30__13_34_58
+seed: 42
