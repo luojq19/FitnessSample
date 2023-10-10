@@ -16,8 +16,8 @@ verbose: False
 ckpt_name: best_checkpoints.pt
 inverse_sign_1: True
 inverse_sign_2: False
-gradient_compose_method: average # average, pareto
+gradient_compose_method: pareto # average, pareto
 balance_weight_1: 1
 balance_weight_2: 6
-weight_1: 0.5
+weight_1: 1.5
 weight_2: 0.5

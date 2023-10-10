@@ -70,7 +70,8 @@ def _worker_fn(args, logger):
         exp_cfg.verbose,
         exp_cfg.gibbs_samples,
         device=f"cuda:0",
-        inverse_sign=exp_cfg.inverse_sign
+        inverse_sign=exp_cfg.inverse_sign,
+        mutation_sites=exp_cfg.mutation_sites,
     )
     all_outputs = []
     for batch in inputs:
@@ -204,6 +205,8 @@ def main():
     logger.info(f'On seed {seed}. Saving results to {sample_write_path}')
     if config.inverse_sign:
         logger.info(f'Inverse sign is on.')
+    if config.mutation_sites is not None:
+        logger.info(f'Mutation sites: {config.mutation_sites}')
     generate_pairs(config, sample_write_path, logger)
 
 if __name__ == "__main__":

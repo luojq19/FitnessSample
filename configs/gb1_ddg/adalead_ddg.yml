@@ -1,0 +1,22 @@
+task: ddg
+rounds: 100
+sequences_batch_size: 128
+model_queries_per_batch: 128
+# starting_sequence: str,
+base_pool_path: data/gb1/gb1_ddg_percentile_0.0_0.4_99value.csv
+mu: 0.5
+recomb_rate: 0.2
+threshold: 0.05
+rho: 1
+eval_batch_size: 20
+oracle_dir: logs_new/train_predictor_ddg_0_0.4_2023_10_05__15_12_56_agument
+seed: 42
+model:
+  model_type: BaseCNN
+  n_tokens: 20
+  kernel_size: 5
+  input_size: 256
+  dropout: 0.0
+  make_one_hot: True
+  activation: relu
+  linear: True

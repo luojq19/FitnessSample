@@ -80,6 +80,13 @@ class LSTMModel(nn.Module):
     def forward(self, x):
         pass
 
+class MediumCNN(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+        
+    def forward(self, x):
+        pass
+
 if __name__ == '__main__':
     model = BaseCNN(n_tokens=20, kernel_size=5, input_size=256, dropout=0.0, make_one_hot=True, activation='relu', linear=True)
     print(model)

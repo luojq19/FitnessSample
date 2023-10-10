@@ -1,0 +1,23 @@
+task: stability
+rounds: 100
+sequences_batch_size: 128
+model_queries_per_batch: 128
+# starting_sequence: str,
+base_pool_path: data/GFP_stability_percentile_0.2_0.4.csv
+mu: 1
+recomb_rate: 0
+threshold: 0.05
+rho: 0
+eval_batch_size: 20
+base_pool_path: data/GFP_stability_percentile_0.2_0.4.csv
+oracle_dir: logs_new/train_predictor_stability_0.2_0.4_2023_09_30__10_43_49
+seed: 42
+model:
+  model_type: BaseCNN
+  n_tokens: 20
+  kernel_size: 5
+  input_size: 256
+  dropout: 0.0
+  make_one_hot: True
+  activation: relu
+  linear: True

@@ -1,0 +1,16 @@
+task: fit_E2
+predictor_dir: logs_new/train_predictor_E2_0.1_0.4_2023_10_07__22_43_47_augment
+predictor_type: BaseCNN
+csv_path: data/ParD3/E2_E3_percentile_0.1_0.4.csv
+cluster_cutoff: 500
+max_visits: 1
+max_epochs: 15
+# run_name: run_${now:%Y-%m-%d}_${now:%H-%M-%S} #IE_${run.max_epochs}  -- use this name if you don't want the date, but instead the number of epochs
+debug: False
+seed: 1
+temperature: 0.01
+gibbs_samples: 100
+verbose: False
+ckpt_name: best_checkpoints.pt
+inverse_sign: False
+mutation_sites: [60, 63, 79] # None means no limitations

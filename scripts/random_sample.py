@@ -23,6 +23,12 @@ class RandomSampler:
         # self.decay_rate = args.decay_rate
         self.AA_idxs = [i for i in range(len(AA_LIST))]
         self.task = config.task
+        if hasattr(config, 'mutation_sites'):
+            self.mutation_sites = config.mutation_sites
+            print(f'Restrict mutation sites {self.mutation_sites}')
+        else:
+            self.mutation_sites = None
+        self.select_best = config.select_best
     
     def make_n_random_edits(self, seq, nedits, min_pos=None, max_pos=None):
         seq = seq.squeeze()
@@ -33,7 +39,10 @@ class RandomSampler:
             max_pos = seq.size(0)
         # print(min_pos, max_pos)
         # Create non-redundant list of positions to mutate.
-        l = list(range(min_pos,max_pos))
+        if self.mutation_sites is not None:
+            l = self.mutation_sites
+        else:
+            l = list(range(min_pos,max_pos))
         nedits = min(len(l), nedits)
         random.shuffle(l)
         # pick n random positions
@@ -87,16 +96,21 @@ class RandomSampler:
             # print(all_x.shape)
             fitness = run_predictor(oracle, all_x, args)
             # print(f'Fitness shape: {fitness.shape}')
-            if self.task == 'GFP':
+            if self.task in ['GFP', 'gb1', 'fit_E3', 'fit_E2']:
                 best_fitness, best_idxs = torch.sort(fitness, descending=True)
-            elif self.task == 'stability':
+            elif self.task in ['stability', 'ddg']:
                 best_fitness, best_idxs = torch.sort(fitness, descending=False)
             else:
                 logger.error(f'Unknown task {self.task}')
                 raise NotImplementedError
             # print(best_idxs.shape)
-            best_x = [all_x[best_idxs[i].item()] for i in range(n_chains)]
-            best_scores = [fitness[best_idxs[i]].item() for i in range(n_chains)]
+            if self.select_best:
+                best_x = [all_x[best_idxs[i].item()] for i in range(n_chains)]
+                best_scores = [fitness[best_idxs[i]].item() for i in range(n_chains)]
+            else:
+                print(f'self.select_best = {self.select_best}')
+                best_x = [all_x[i] for i in range(n_chains)]
+                best_scores = [fitness[i].item() for i in range(n_chains)]
             best_seqs = [indices2seq(best_x[i]) for i in range(len(best_x))]
             df = pd.DataFrame({'mutant_sequences': best_seqs, 'mutant_scores': best_scores})
             logger.info(f'Saving {len(df)} sampled sequences to {save_path}')

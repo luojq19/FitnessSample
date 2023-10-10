@@ -76,8 +76,12 @@ def _worker_fn(args, logger):
             gradient_compose_method=config.gradient_compose_method,
             balance_weight_1=config.balance_weight_1,
             balance_weight_2=config.balance_weight_2,
+            lambda_=config.lambd,
+            mutation_sites=config.mutation_sites,
+            lambda_method=config.lambda_method,
             weight_1=config.weight_1,
-            weight_2=config.weight_2,)
+            weight_2=config.weight_2,
+            )
     all_outputs = []
     for batch in inputs:
         all_outputs.append(model(batch))
@@ -174,6 +178,7 @@ def get_args():
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--gen', action='store_true')
+    parser.add_argument('--lambd', type=float, default=None)
     args = parser.parse_args()
     
     return args
@@ -186,6 +191,7 @@ def main():
     config = common.load_config(args.config)
     config_name = os.path.basename(args.config)[:os.path.basename(args.config).rfind('.')]
     common.seed_all(config.seed if args.seed is None else args.seed)
+    config.lambd = args.lambd if args.lambd is not None else config.lambd
     
     # Logging
     log_dir = common.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)

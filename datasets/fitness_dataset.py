@@ -8,7 +8,11 @@ import random
 AA_LIST = list("ARNDCQEGHILKMFPSTWYV")
 aa2idx = {aa: idx for idx, aa in enumerate(AA_LIST)}
 worst_fitness = {'stability': 68.6938,
-                 'GFP': 0.0}
+                 'GFP': 0.0,
+                 'gb1': 0.0,
+                 'ddg': 116.583,
+                 'fit_E3': 0.0,
+                 'fit_E2': 0.0,}
 
 def seq2indices(seq):
     return torch.tensor([aa2idx[aa] for aa in seq])

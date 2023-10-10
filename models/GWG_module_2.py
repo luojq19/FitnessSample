@@ -1,3 +1,5 @@
+import sys
+sys.path.append('.')
 import torch
 import numpy as np
 import logging
@@ -9,7 +11,7 @@ from .predictors import BaseCNN
 from omegaconf import OmegaConf
 import os
 import torch.nn as nn
-
+from utils.pareto_moosvgd import compose_two_gradients_moosvgd
 from typing import List
 
 to_np = lambda x: x.cpu().detach().numpy()
@@ -97,8 +99,11 @@ class GwgPairSampler_2(torch.nn.Module):
             gradient_compose_method: str = 'average',
             balance_weight_1 = 1,
             balance_weight_2 = 6,
-            weight_1 = 1,
-            weight_2 = 1,
+            lambda_ = 1.0,
+            mutation_sites = None,
+            lambda_method = None,
+            weight_1 = 1.0,
+            weight_2 = 1.0,
         ):
         super().__init__()
         self._ckpt_name = ckpt_name
@@ -107,6 +112,7 @@ class GwgPairSampler_2(torch.nn.Module):
         self.inverse_sign_1 = inverse_sign_1
         self.inverse_sign_2 = inverse_sign_2
         self.gradient_compose_method = gradient_compose_method
+        print(f'gradient_compose_method: {self.gradient_compose_method}')
         self._log.info(f'Using device: {self.device}')
         self.predictor_tokenizer = Encoder()
         self.predictor_1 = self._setup_predictor(predictor_1_dir, self.inverse_sign_1)
@@ -121,9 +127,16 @@ class GwgPairSampler_2(torch.nn.Module):
         self._verbose = verbose
         self.balance_weight_1 = balance_weight_1
         self.balance_weight_2 = balance_weight_2
-        self.weight_1 = weight_1 / (weight_1 + weight_2)
-        self.weight_2 = weight_2 / (weight_1 + weight_2)
-        print(f'balance_weight_1: {self.balance_weight_1}, balance_weight_2: {self.balance_weight_2}, weight_1: {self.weight_1}, weight_2: {self.weight_2}')
+        self.lambda_ = lambda_
+        self.mutation_sites = mutation_sites
+        self.lambda_method = lambda_method
+        self.weight_1 = weight_1
+        self.weight_2 = weight_2
+        print(f'balance_weight_1: {self.balance_weight_1}, balance_weight_2: {self.balance_weight_2}, lambda_: {self.lambda_}')
+        print(f'mutation_sites: {self.mutation_sites}')
+        print(f'lambda_method: {self.lambda_method}')
+        if self.lambda_method == '2_weight':
+            print(f'weight_1: {weight_1}, weight_2: {weight_2}')
         
     def _setup_predictor(self, predictor_dir: str, inverse_sign: bool):
         # Load model weights.
@@ -175,28 +188,48 @@ class GwgPairSampler_2(torch.nn.Module):
         # print(a.item())
         return a
     
-    def _compose_two_gradients(self, grad1, grad2, gradient_compose_method):
+    def _compose_two_gradients(self, grad1, grad2, gradient_compose_method, inputs, score_1, score_2):
         if gradient_compose_method == 'average':
             return (grad1 * self.balance_weight_1 + grad2 * self.balance_weight_2) / 2
         elif gradient_compose_method == 'pareto':
             # print(grad1.shape, grad2.shape)
             alpha = self._compute_alpha(grad1 * self.balance_weight_1, grad2 * self.balance_weight_2)
-            return alpha * grad1 + (1 - alpha) * grad2
+            if self.lambda_method == 'alpha_lambda':
+                return alpha * self.lambda_ * grad1 + (1 - alpha * self.lambda_) * grad2
+            elif self.lambda_method == 'lambda':
+                return alpha * grad1 + self.lambda_ * (1 - alpha) * grad2
+            elif self.lambda_method == '2_weight':
+                return alpha * self.weight_1 * grad1 + (1 - alpha) * self.weight_2 * grad2
+            else:
+                raise NotImplementedError
+        elif gradient_compose_method == 'pareto_moosvgd':
+            return compose_two_gradients_moosvgd(grad1, grad2, inputs, score_1, score_2)
         else:
             raise NotImplementedError
     
     def _calc_local_diff_2(self, seq_one_hot):
         # Construct local difference for two predictor case
-        gx1 = torch.autograd.grad(self.predictor_1(seq_one_hot).sum(), seq_one_hot)[0]
-        gx2 = torch.autograd.grad(self.predictor_2(seq_one_hot).sum(), seq_one_hot)[0]
-        gx = self._compose_two_gradients(gx1, gx2, self.gradient_compose_method)
+        score_1 = self.predictor_1(seq_one_hot)
+        score_2 = self.predictor_2(seq_one_hot)
+        gx1 = torch.autograd.grad(score_1.sum(), seq_one_hot, retain_graph=True)[0]
+        gx2 = torch.autograd.grad(score_2.sum(), seq_one_hot, retain_graph=True)[0]
+        gx = self._compose_two_gradients(gx1, gx2, self.gradient_compose_method, seq_one_hot, score_1, score_2)
         gx_cur = (gx * seq_one_hot).sum(-1)[:, :, None]
         delta_ij = gx - gx_cur
         return delta_ij
     
+    def set_rows_to_neg_inf(self, tensor, indices):
+        n = tensor.shape[0]
+        for i in range(n):
+            if i not in indices:
+                tensor[i] = torch.full_like(tensor[i], float(-1e9), device=tensor.device)
+        return tensor
+    
     def _gibbs_sampler(self, seq_one_hot):
         delta_ij = self._calc_local_diff_2(seq_one_hot)
         delta_ij = delta_ij[0]
+        if self.mutation_sites is not None:
+            delta_ij = self.set_rows_to_neg_inf(delta_ij, self.mutation_sites)
         # One step of GWG sampling.
         def _gwg_sample():
             seq_len, num_tokens = delta_ij.shape

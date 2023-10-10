@@ -285,6 +285,9 @@ def single_task_selection(sample_path, topk1, topk2):
     
     return sampled_seqs
 
+def max_hv_selection(sample_path, topk1, topk2):
+    logger.warning('Max hv selecting sequences for evaluation.')
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str, default='configs/evaluate.yml')

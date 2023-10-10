@@ -92,6 +92,7 @@ class GwgPairSampler(torch.nn.Module):
             gibbs_samples: int = 500,
             device: str = "cuda",
             inverse_sign: bool = False,
+            mutation_sites: List[int] = None,
         ):
         super().__init__()
         self._ckpt_name = ckpt_name
@@ -108,6 +109,7 @@ class GwgPairSampler(torch.nn.Module):
         self.num_current_src_seqs = 0
         self.gibbs_samples = gibbs_samples
         self._verbose = verbose
+        self.mutation_sites = mutation_sites
 
     def _setup_predictor(self, predictor_dir: str):
         # Load model weights.
@@ -140,12 +142,23 @@ class GwgPairSampler(torch.nn.Module):
         delta_ij = gx - gx_cur
         return delta_ij
 
+    def set_rows_to_neg_inf(self, tensor, indices):
+        n = tensor.shape[0]
+        for i in range(n):
+            if i not in indices:
+                tensor[i] = torch.full_like(tensor[i], float(-1e9), device=tensor.device)
+        return tensor
+    
     def _gibbs_sampler(self, seq_one_hot):
         delta_ij = self._calc_local_diff(seq_one_hot)
         delta_ij = delta_ij[0]
+        if self.mutation_sites is not None:
+            delta_ij = self.set_rows_to_neg_inf(delta_ij, self.mutation_sites)
         # One step of GWG sampling.
         def _gwg_sample():
             seq_len, num_tokens = delta_ij.shape
+            # if self.mutation_sites is not None:
+            # delta_ij = self.zero_out_rows(delta_ij, [38, 39, 40, 53])
             # Construct proposal distributions
             gwg_proposal = dists.OneHotCategorical(logits = delta_ij.flatten() / self.temp)
             r_ij = gwg_proposal.sample((self.gibbs_samples,)).reshape(
@@ -154,7 +167,11 @@ class GwgPairSampler(torch.nn.Module):
             # [num_samples, L, 20]
             seq_token = torch.argmax(seq_one_hot, dim=-1)
             mutated_seqs = seq_token.repeat(self.gibbs_samples, 1)
+            # print(f'mutated_seqs: {mutated_seqs.shape}')
             seq_idx, res_idx, aa_idx = torch.where(r_ij)
+            # print(f'seq_idx: {seq_idx}')
+            # print(f'res_idx: {res_idx}')
+            # input()
             mutated_seqs[(seq_idx, res_idx)] = aa_idx
             return mutated_seqs
         
