@@ -10,3 +10,8 @@ ground_truth_GFP: data/GFP/GFP_ground_truth_deduplicate.csv
 GFP_oracle_dir: logs/oracle_GFP_ggs
 foldx_cache: data/foldx/cache.json
 selection_method: nested_selection # topk_selection, nested_selection, random_selection, single_task_selection, max_hv_selection
+num_select: 100
+ref_score_1: null
+ref_score_2: null
+inverse_sign_1: False
+inverse_sign_2: True

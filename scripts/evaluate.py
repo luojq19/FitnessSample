@@ -10,7 +10,7 @@ import numpy as np
 from utils import common
 from utils import eval
 from utils.common import sec2min_sec
-from utils.eval import calc_hypervolume, diversity, novelty
+from utils.eval import calc_hypervolume, diversity, novelty, greedy_selection
 from models import BaseCNN
 import torch
 import json
@@ -294,7 +294,7 @@ def get_args():
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--tag', type=str, default=None)
     parser.add_argument('--sample_path', type=str, default=None)
-    parser.add_argument('--num_threads', type=int, default=64)
+    parser.add_argument('--num_threads', type=int, default=32)
 
     return parser.parse_args()
 
@@ -304,7 +304,8 @@ def main():
     if args.sample_path is not None:
         config.sample_path = args.sample_path
     logger.info(f'Evaluating {config.sample_path}...')
-    sampled_seqs = globals()[config.selection_method](config.sample_path, config.topk1, config.topk2)
+    # sampled_seqs = globals()[config.selection_method](config.sample_path, config.topk1, config.topk2)
+    sampled_seqs = greedy_selection(config.sample_path, )
     GFP_results = evaluate_GFP(sampled_seqs, config, args)
     logger.info('Finished evaluating GFP.')
     stability_results = evaluate_stability(sampled_seqs, config, args)

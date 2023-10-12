@@ -3,7 +3,7 @@ sys.path.append('.')
 import os, argparse, time, datetime, json
 from utils import common
 import pandas as pd
-from utils.eval import calc_hypervolume, diversity, novelty
+from utils.eval import calc_hypervolume, diversity, novelty, greedy_selection
 import numpy as np
 
 now = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -84,7 +84,8 @@ if __name__ == '__main__':
     if args.sample_path is not None:
         config.sample_path = args.sample_path
     logger.info(f'Evaluating {config.sample_path}...')
-    sampled_seqs = load_all_seqs(config.sample_path)
+    # sampled_seqs = load_all_seqs(config.sample_path)
+    sampled_seqs = greedy_selection(config.sample_path, config.num_select, ref_score_1=config.ref_score_1, ref_score_2=config.ref_score_2, inverse_sign_1=config.inverse_sign_1, inverse_sign_2=config.inverse_sign_2)
     logger.info(f'Loaded {len(sampled_seqs)} sequences')
     gt_seq2label = load_ground_truth(config.gt_csv_path)
     evaluate(sampled_seqs, gt_seq2label, save_dir=os.path.dirname(config.sample_path), tag=args.tag)

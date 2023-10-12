@@ -1,7 +1,15 @@
+import sys
+sys.path.append('./utils')
 import torch
 import numpy as np
 from pymoo.indicators.hv import HV
 from polyleven import levenshtein
+import pandas as pd
+import time
+import logging
+from common import get_logger
+
+logger = get_logger(__name__)
 
 # Function to calculate Root Mean Square Error (RMSE)
 def calculate_rmse(prediction, ground_truth):
@@ -67,10 +75,53 @@ def novelty(sampled_seqs, base_pool_seqs):
         
     return all_novelty
 
+def greedy_selection(csv_path, num_select=100, ref_score_1=None, ref_score_2=None, inverse_sign_1=False, inverse_sign_2=False):
+    start = time.time()
+    df = pd.read_csv(csv_path)
+    seq_column = 'mutant_sequences' if 'mutant_sequences' in df.columns else 'sequence'
+    df = df.drop_duplicates(subset=[seq_column])
+    all_seqs = df[seq_column].tolist()
+    scores_1 = df['mutant_scores_1'].values if not inverse_sign_1 else -df['mutant_scores_1'].values
+    scores_2 = df['mutant_scores_2'].values if not inverse_sign_2 else -df['mutant_scores_2'].values
+    selected_idxs = []
+    n = len(df)
+    if ref_score_1 is None:
+        ref_score_1 = np.max(scores_1)
+    logger.info(f'ref_score_1: {ref_score_1}')
+    if ref_score_2 is None:
+        ref_score_2 = np.max(scores_2)
+    logger.info(f'ref_score_2: {ref_score_2}')
+    while len(selected_idxs) < num_select:
+        print(f'{len(selected_idxs)}/{num_select}', end='\r', flush=True)
+        max_hv = 0
+        max_idx = -1
+        for i in range(n):
+            if i in selected_idxs:
+                continue
+            selected_scores_1 = scores_1[selected_idxs + [i]]
+            selected_scores_2 = scores_2[selected_idxs + [i]]
+            hv = calc_hypervolume(selected_scores_1, selected_scores_2, ref_score_1, ref_score_2)
+            if hv > max_hv:
+                max_hv = hv
+                max_idx = i
+        if 0 <= max_idx < n:
+            selected_idxs.append(max_idx)
+    end = time.time()
+    logger.info(f'max_hv: {max_hv}')
+    logger.info(f'reference_hv: {calc_hypervolume([scores_1.min()] * num_select, [scores_2.min()] * num_select, ref_score_1, ref_score_2)}')
+    logger.info(f'greedy selection done! Selected {len(selected_idxs)} sequences. Time elapsed: {end-start:.2f} seconds.')
+    selected_sequences = [all_seqs[i] for i in selected_idxs]
+    
+    return selected_sequences
+    
+
 if __name__ == '__main__':
-    a = torch.arange(10, dtype=torch.float32).reshape(2,5)
-    b = torch.arange(10, dtype=torch.float32).reshape(2,5)
-    a = torch.randn((512,2))
-    b = torch.randn((512,2))
-    acc = calculate_rmse(a, b)
-    print(acc)
+    # a = torch.arange(10, dtype=torch.float32).reshape(2,5)
+    # b = torch.arange(10, dtype=torch.float32).reshape(2,5)
+    # a = torch.randn((512,2))
+    # b = torch.randn((512,2))
+    # acc = calculate_rmse(a, b)
+    # logger.info(acc)
+    selected_seqs = greedy_selection('../logs_new/GWG_2_gb1_ddg_pref_vec_2023_10_11__11_15_06_pref_index_0/samples_20231011-111506/seed_1.csv', 10, ref_score_1=None, ref_score_2=None, inverse_sign_1=False, inverse_sign_2=True)
+    print(len(selected_seqs))
+    print(selected_seqs[0])

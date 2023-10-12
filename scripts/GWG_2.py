@@ -81,6 +81,7 @@ def _worker_fn(args, logger):
             lambda_method=config.lambda_method,
             weight_1=config.weight_1,
             weight_2=config.weight_2,
+            pref_index=config.pref_index
             )
     all_outputs = []
     for batch in inputs:
@@ -179,6 +180,7 @@ def get_args():
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--gen', action='store_true')
     parser.add_argument('--lambd', type=float, default=None)
+    parser.add_argument('--pref_index', type=int, default=None)
     args = parser.parse_args()
     
     return args
@@ -192,6 +194,7 @@ def main():
     config_name = os.path.basename(args.config)[:os.path.basename(args.config).rfind('.')]
     common.seed_all(config.seed if args.seed is None else args.seed)
     config.lambd = args.lambd if args.lambd is not None else config.lambd
+    config.pref_index = args.pref_index if args.pref_index is not None else config.pref_index
     
     # Logging
     log_dir = common.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)

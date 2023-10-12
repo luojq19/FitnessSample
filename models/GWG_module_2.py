@@ -12,6 +12,7 @@ from omegaconf import OmegaConf
 import os
 import torch.nn as nn
 from utils.pareto_moosvgd import compose_two_gradients_moosvgd
+from utils.pareto_pref_vec import get_d_paretomtl, circle_points, get_d_paretomtl_batch
 from typing import List
 
 to_np = lambda x: x.cpu().detach().numpy()
@@ -104,6 +105,7 @@ class GwgPairSampler_2(torch.nn.Module):
             lambda_method = None,
             weight_1 = 1.0,
             weight_2 = 1.0,
+            pref_index = 0,
         ):
         super().__init__()
         self._ckpt_name = ckpt_name
@@ -132,11 +134,16 @@ class GwgPairSampler_2(torch.nn.Module):
         self.lambda_method = lambda_method
         self.weight_1 = weight_1
         self.weight_2 = weight_2
+        self.pref_vec = torch.tensor(circle_points([1], [5])[0]).cuda().float()
+        self.pref_index = pref_index
         print(f'balance_weight_1: {self.balance_weight_1}, balance_weight_2: {self.balance_weight_2}, lambda_: {self.lambda_}')
         print(f'mutation_sites: {self.mutation_sites}')
         print(f'lambda_method: {self.lambda_method}')
         if self.lambda_method == '2_weight':
             print(f'weight_1: {weight_1}, weight_2: {weight_2}')
+        if self.gradient_compose_method == 'pareto_pref_vec':
+            print(f'pref_index: {self.pref_index}')
+            print(f'pref_vec: {self.pref_vec}')
         
     def _setup_predictor(self, predictor_dir: str, inverse_sign: bool):
         # Load model weights.
@@ -204,6 +211,11 @@ class GwgPairSampler_2(torch.nn.Module):
                 raise NotImplementedError
         elif gradient_compose_method == 'pareto_moosvgd':
             return compose_two_gradients_moosvgd(grad1, grad2, inputs, score_1, score_2)
+        elif gradient_compose_method == 'pareto_pref_vec':
+            grads = [grad1, grad2]
+            scores = [score_1, score_2]
+            weights = get_d_paretomtl_batch(grads, scores, self.pref_vec, self.pref_index)
+            return weights[0] * grad1 + weights[1] * grad2
         else:
             raise NotImplementedError
     
@@ -214,6 +226,8 @@ class GwgPairSampler_2(torch.nn.Module):
         gx1 = torch.autograd.grad(score_1.sum(), seq_one_hot, retain_graph=True)[0]
         gx2 = torch.autograd.grad(score_2.sum(), seq_one_hot, retain_graph=True)[0]
         gx = self._compose_two_gradients(gx1, gx2, self.gradient_compose_method, seq_one_hot, score_1, score_2)
+        # print(f'gx1: {gx1.shape}, gx2: {gx2.shape}, gx: {gx.shape}')
+        # input()
         gx_cur = (gx * seq_one_hot).sum(-1)[:, :, None]
         delta_ij = gx - gx_cur
         return delta_ij
@@ -278,8 +292,11 @@ class GwgPairSampler_2(torch.nn.Module):
         # [num_seq, L, 20]
         mutant_one_hot = self._make_one_hot(mutants, differentiable=True)
         mutated_one_hot = mutant_one_hot * mutated_indices[..., None]
-        
+        # print(f'MH: {source_one_hot[None].shape}')
+        # print(f'source_delta_ij:')
         source_delta_ij = self._calc_local_diff_2(source_one_hot[None])
+        # print(f'MH: {mutant_one_hot.shape}')
+        # print(f'mutant_delta_ij:')
         mutant_delta_ij = self._calc_local_diff_2(mutant_one_hot)
 
         orig_source_shape = source_delta_ij.shape
