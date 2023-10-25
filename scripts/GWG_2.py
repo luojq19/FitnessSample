@@ -64,13 +64,14 @@ def _worker_fn(args, logger):
         all_outputs: results of GWG.
     """
     worker_i, config, inputs = args
-    model = GwgPairSampler_2(predictor_1_dir=config.predictor_1_dir,
+    model = GwgPairSampler_2(config=config,
+            predictor_1_dir=config.predictor_1_dir,
             predictor_2_dir=config.predictor_2_dir,
             temperature=config.temperature,
             ckpt_name=config.ckpt_name,
             verbose=config.verbose,
             gibbs_samples=config.gibbs_samples,
-            device="cuda:0",
+            device=config.device,
             inverse_sign_1=config.inverse_sign_1,
             inverse_sign_2=config.inverse_sign_2,
             gradient_compose_method=config.gradient_compose_method,
@@ -135,7 +136,7 @@ def generate_pairs(cfg: DictConfig, sample_write_path: str, logger) -> Tuple[dic
             batches_per_worker[i].append(batch)
             if cfg.debug:
                 break
-        logger.info(f"using GPU: {torch.device('cuda')}" )
+        logger.info(f"using GPU: {torch.device(cfg.device)}" )
         all_worker_outputs = [
             _worker_fn((0, exp_cfg, batches_per_worker[0]), logger)
         ]
@@ -174,13 +175,14 @@ def generate_pairs(cfg: DictConfig, sample_write_path: str, logger) -> Tuple[dic
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str, default='./configs/train.yml')
-    parser.add_argument('--logdir', type=str, default='./logs_new')
+    parser.add_argument('--logdir', type=str, default='./logs_mgda_linear_1024')
     parser.add_argument('--device', type=str, default='cuda:0')
     parser.add_argument('--tag', type=str, default='')
     parser.add_argument('--seed', type=int, default=None)
     parser.add_argument('--gen', action='store_true')
     parser.add_argument('--lambd', type=float, default=None)
     parser.add_argument('--pref_index', type=int, default=None)
+    parser.add_argument('--linear_weight_1', type=float, default=None)
     args = parser.parse_args()
     
     return args
@@ -195,6 +197,8 @@ def main():
     common.seed_all(config.seed if args.seed is None else args.seed)
     config.lambd = args.lambd if args.lambd is not None else config.lambd
     config.pref_index = args.pref_index if args.pref_index is not None else config.pref_index
+    config.device = args.device
+    config.linear_weight_1 = args.linear_weight_1 if args.linear_weight_1 is not None else config.linear_weight_1
     
     # Logging
     log_dir = common.get_new_log_dir(args.logdir, prefix=config_name, tag=args.tag)

@@ -68,6 +68,20 @@ def evaluate(sampled_seqs, gt_seq2label, save_dir=None, tag=None):
                                'max': [gb1_max, ddg_max, gb1_normalized_max, ddg_normalized_max]})
     metrics_df.to_csv(os.path.join(save_dir, f'evaluation_metrics{tag}.csv'), index=False)
 
+def nested_selection(config):
+    logger.warning('Nested selecting sequences for evaluation.')
+    sample_path = config.sample_path
+    num_select = config.num_select
+    df = pd.read_csv(sample_path)
+    df = df.drop_duplicates(subset='mutant_sequences', ignore_index=True)
+    df = df.sort_values('mutant_scores_1', ascending=False).head(num_select * 10)
+    df = df.sort_values('mutant_scores_2', ascending=False).head(num_select)
+    sampled_seqs = df.mutant_sequences.tolist()
+    sampled_seqs = list(set(sampled_seqs))
+    logger.info(f'Sampled {len(sampled_seqs)} unique sequences for evaluation.')
+    
+    return sampled_seqs
+
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str, default='configs/gb1_ddg/evaluate.yml')
@@ -85,7 +99,8 @@ if __name__ == '__main__':
         config.sample_path = args.sample_path
     logger.info(f'Evaluating {config.sample_path}...')
     # sampled_seqs = load_all_seqs(config.sample_path)
-    sampled_seqs = greedy_selection(config.sample_path, config.num_select, ref_score_1=config.ref_score_1, ref_score_2=config.ref_score_2, inverse_sign_1=config.inverse_sign_1, inverse_sign_2=config.inverse_sign_2)
+    # sampled_seqs = greedy_selection(config.sample_path, config.num_select, ref_score_1=config.ref_score_1, ref_score_2=config.ref_score_2, inverse_sign_1=config.inverse_sign_1, inverse_sign_2=config.inverse_sign_2)
+    sampled_seqs = globals()[config.selection_method](config)
     logger.info(f'Loaded {len(sampled_seqs)} sequences')
     gt_seq2label = load_ground_truth(config.gt_csv_path)
     evaluate(sampled_seqs, gt_seq2label, save_dir=os.path.dirname(config.sample_path), tag=args.tag)

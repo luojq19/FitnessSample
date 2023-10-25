@@ -9,7 +9,7 @@ import time
 import logging
 from common import get_logger
 
-logger = get_logger(__name__)
+logger = get_logger('eval')
 
 # Function to calculate Root Mean Square Error (RMSE)
 def calculate_rmse(prediction, ground_truth):
@@ -114,6 +114,65 @@ def greedy_selection(csv_path, num_select=100, ref_score_1=None, ref_score_2=Non
     
     return selected_sequences
     
+def pareto_selection(csv_path, num_select=100, inverse_sign_1=False, inverse_sign_2=False):
+    '''by default, the objectives should be maximized'''
+    start = time.time()
+    df = pd.read_csv(csv_path)
+    seq_column = 'mutant_sequences' if 'mutant_sequences' in df.columns else 'sequence'
+    df = df.drop_duplicates(subset=[seq_column])
+    all_seqs = df[seq_column].tolist()
+    scores_1 = df['mutant_scores_1'].values if not inverse_sign_1 else -df['mutant_scores_1'].values
+    scores_2 = df['mutant_scores_2'].values if not inverse_sign_2 else -df['mutant_scores_2'].values
+    selected_idxs = []
+    n = len(df)
+    for i in range(n):
+        if i in selected_idxs:
+            continue
+        dominated = False
+        for j in range(n):
+            if i == j:
+                continue
+            if scores_1[i] <= scores_1[j] and scores_2[i] <= scores_2[j] and (scores_1[i] < scores_1[j] or scores_2[i] < scores_2[j]):
+                dominated = True
+                break
+        if not dominated:
+            selected_idxs.append(i)
+    selected_seqs = [all_seqs[i] for i in selected_idxs]
+    end = time.time()
+    logger.info(f'pareto selection done! Selected {len(selected_seqs)} sequences. Time elapsed: {end-start:.2f} seconds.')
+    
+    return selected_seqs
+
+def get_pareto_front(csv_path, label_1, label_2, inverse_sign_1=False, inverse_sign_2=False):
+    '''by default, the objectives should be maximized'''
+    start = time.time()
+    df = pd.read_csv(csv_path)
+    seq_column = 'mutant_sequences' if 'mutant_sequences' in df.columns else 'sequence'
+    df = df.drop_duplicates(subset=[seq_column])
+    all_seqs = df[seq_column].tolist()
+    scores_1 = df[label_1].values if not inverse_sign_1 else -df[label_1].values
+    scores_2 = df[label_2].values if not inverse_sign_2 else -df[label_2].values
+    selected_idxs = []
+    n = len(df)
+    for i in range(n):
+        if i in selected_idxs:
+            continue
+        dominated = False
+        for j in range(n):
+            if i == j:
+                continue
+            if scores_1[i] <= scores_1[j] and scores_2[i] <= scores_2[j] and (scores_1[i] < scores_1[j] or scores_2[i] < scores_2[j]):
+                dominated = True
+                break
+        if not dominated:
+            selected_idxs.append(i)
+    selected_seqs = [all_seqs[i] for i in selected_idxs]
+    selected_scores_1 = scores_1[selected_idxs]
+    selected_scores_2 = scores_2[selected_idxs]
+    end = time.time()
+    logger.info(f'Got pareto front! Selected {len(selected_seqs)} sequences. Time elapsed: {end-start:.2f} seconds.')
+    
+    return selected_seqs, selected_scores_1, selected_scores_2
 
 if __name__ == '__main__':
     # a = torch.arange(10, dtype=torch.float32).reshape(2,5)

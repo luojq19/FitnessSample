@@ -245,10 +245,10 @@ def topk_selection(sample_path, topk1, topk2):
 
     return sampled_seqs
 
-def random_selection(sample_path, topk1, topk2):
+def random_selection(config):
     logger.warning('Randomly selecting sequences for evaluation.')
-    num_select = topk1 + topk2
-    df = pd.read_csv(sample_path)
+    num_select = config.num_select
+    df = pd.read_csv(config.sample_path)
     df = df.drop_duplicates(subset='mutant_sequences', ignore_index=True)
     sampled_seqs = df.mutant_sequences.tolist()
     sampled_seqs = np.random.choice(sampled_seqs, num_select, replace=False)
@@ -257,9 +257,10 @@ def random_selection(sample_path, topk1, topk2):
     
     return sampled_seqs
 
-def nested_selection(sample_path, topk1, topk2):
+def nested_selection(config):
     logger.warning('Nested selecting sequences for evaluation.')
-    num_select = topk1 + topk2
+    sample_path = config.sample_path
+    num_select = config.num_select
     df = pd.read_csv(sample_path)
     df = df.drop_duplicates(subset='mutant_sequences', ignore_index=True)
     df = df.sort_values('mutant_scores_1', ascending=False).head(num_select * 10)
@@ -295,17 +296,20 @@ def get_args():
     parser.add_argument('--tag', type=str, default=None)
     parser.add_argument('--sample_path', type=str, default=None)
     parser.add_argument('--num_threads', type=int, default=32)
+    parser.add_argument('--seed', type=int, default=1)
 
     return parser.parse_args()
 
 def main():
     args = get_args()
     config = common.load_config(args.config)
+    common.seed_all(args.seed)
     if args.sample_path is not None:
         config.sample_path = args.sample_path
     logger.info(f'Evaluating {config.sample_path}...')
     # sampled_seqs = globals()[config.selection_method](config.sample_path, config.topk1, config.topk2)
-    sampled_seqs = greedy_selection(config.sample_path, )
+    sampled_seqs = globals()[config.selection_method](config)
+    # sampled_seqs = greedy_selection(config.sample_path, )
     GFP_results = evaluate_GFP(sampled_seqs, config, args)
     logger.info('Finished evaluating GFP.')
     stability_results = evaluate_stability(sampled_seqs, config, args)

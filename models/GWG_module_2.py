@@ -88,6 +88,7 @@ class GwgPairSampler_2(torch.nn.Module):
     
     def __init__(
             self,
+            config,
             predictor_1_dir: str,
             predictor_2_dir: str,
             temperature: float,
@@ -108,6 +109,7 @@ class GwgPairSampler_2(torch.nn.Module):
             pref_index = 0,
         ):
         super().__init__()
+        self.config = config
         self._ckpt_name = ckpt_name
         self._log = logging.getLogger(__name__)
         self.device = torch.device(device)
@@ -115,7 +117,7 @@ class GwgPairSampler_2(torch.nn.Module):
         self.inverse_sign_2 = inverse_sign_2
         self.gradient_compose_method = gradient_compose_method
         print(f'gradient_compose_method: {self.gradient_compose_method}')
-        self._log.info(f'Using device: {self.device}')
+        print(f'Using device: {self.device}')
         self.predictor_tokenizer = Encoder()
         self.predictor_1 = self._setup_predictor(predictor_1_dir, self.inverse_sign_1)
         self.predictor_2 = self._setup_predictor(predictor_2_dir, self.inverse_sign_2)
@@ -134,7 +136,7 @@ class GwgPairSampler_2(torch.nn.Module):
         self.lambda_method = lambda_method
         self.weight_1 = weight_1
         self.weight_2 = weight_2
-        self.pref_vec = torch.tensor(circle_points([1], [5])[0]).cuda().float()
+        self.pref_vec = torch.tensor(circle_points([1], [5])[0]).float().to(self.device)
         self.pref_index = pref_index
         print(f'balance_weight_1: {self.balance_weight_1}, balance_weight_2: {self.balance_weight_2}, lambda_: {self.lambda_}')
         print(f'mutation_sites: {self.mutation_sites}')
@@ -144,6 +146,8 @@ class GwgPairSampler_2(torch.nn.Module):
         if self.gradient_compose_method == 'pareto_pref_vec':
             print(f'pref_index: {self.pref_index}')
             print(f'pref_vec: {self.pref_vec}')
+        elif self.gradient_compose_method == 'linear':
+            print(f'Linear weights: [{config.linear_weight_1}, {1 - config.linear_weight_1}]')
         
     def _setup_predictor(self, predictor_dir: str, inverse_sign: bool):
         # Load model weights.
@@ -196,8 +200,9 @@ class GwgPairSampler_2(torch.nn.Module):
         return a
     
     def _compose_two_gradients(self, grad1, grad2, gradient_compose_method, inputs, score_1, score_2):
-        if gradient_compose_method == 'average':
-            return (grad1 * self.balance_weight_1 + grad2 * self.balance_weight_2) / 2
+        if gradient_compose_method == 'linear':
+            # return (grad1 * self.balance_weight_1 + grad2 * self.balance_weight_2) / 2
+            return grad1 * self.config.linear_weight_1 + grad2 * (1 - self.config.linear_weight_1)
         elif gradient_compose_method == 'pareto':
             # print(grad1.shape, grad2.shape)
             alpha = self._compute_alpha(grad1 * self.balance_weight_1, grad2 * self.balance_weight_2)
@@ -215,6 +220,10 @@ class GwgPairSampler_2(torch.nn.Module):
             grads = [grad1, grad2]
             scores = [score_1, score_2]
             weights = get_d_paretomtl_batch(grads, scores, self.pref_vec, self.pref_index)
+            weights = weights.to(self.device)
+            # print(f'weights: {weights.shape}, {weights[0]}, {weights[1]}')
+            # print(f'grad1: {grad1.shape}, grad2: {grad2.shape}')
+            # input()
             return weights[0] * grad1 + weights[1] * grad2
         else:
             raise NotImplementedError

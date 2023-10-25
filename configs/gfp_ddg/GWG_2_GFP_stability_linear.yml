@@ -16,14 +16,13 @@ verbose: False
 ckpt_name: best_checkpoints.pt
 inverse_sign_1: True
 inverse_sign_2: False
-gradient_compose_method: pareto # average, pareto
+gradient_compose_method: linear # linear, pareto, pareto_moosvgd, pareto_pref_vec
+linear_weight_1: 0.5
 balance_weight_1: 1
 balance_weight_2: 1
+lambd: 1.0
 weight_1: 1.0
 weight_2: 1.0
-lambda_method: lambda
-lambd: 1.0
-pref_index: 0
-linear_weight_1: 0.5
-linear_weight_2: 0.5
-mutation_sites: null
+lambda_method: lambda # alpha_lambda, lambda, 2_weight
+mutation_sites: null # None means no limitations
+pref_index: 0 #[0, 4]

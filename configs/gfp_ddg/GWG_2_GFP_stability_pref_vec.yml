@@ -1,9 +1,12 @@
-task: GFP
+# task: GFP
+obj_1: stability
+obj_2: GFP
 predictor_1_dir: logs_new/train_predictor_stability_0.2_0.4_2023_09_30__10_43_49
 predictor_2_dir: logs_new/train_smooth_GFP_2023_09_30__13_34_58
 predictor_1_type: BaseCNN
 predictor_2_type: BaseCNN
 csv_path: data/GFP_stability_percentile_0.2_0.4.csv
+subsamples: 100
 cluster_cutoff: 500
 max_visits: 1
 max_epochs: 15
@@ -11,7 +14,7 @@ max_epochs: 15
 debug: False
 seed: 1
 temperature: 0.01
-gibbs_samples: 100
+gibbs_samples: 10
 verbose: False
 ckpt_name: best_checkpoints.pt
 inverse_sign_1: True
@@ -24,4 +27,6 @@ weight_1: 1.0
 weight_2: 1.0
 lambda_method: lambda # alpha_lambda, lambda, 2_weight
 mutation_sites: null # None means no limitations
-pref_index: 0 #[0, 4]
+num_pref_vec: 5
+pref_index: 0 #[0, num_pref_vec)
+initial_epochs: 3

@@ -1,0 +1,28 @@
+task: gb1
+predictor_1_dir: logs_new/train_predictor_ddg_0_0.4_2023_10_05__15_12_56_agument
+predictor_2_dir: logs_new/train_predictor_gb1_0_0.4_2023_10_05__15_12_17_augment
+predictor_1_type: BaseCNN
+predictor_2_type: BaseCNN
+csv_path: data/gb1/gb1_ddg_percentile_0.0_0.4_99value.csv
+cluster_cutoff: 500
+max_visits: 1
+max_epochs: 15
+# run_name: run_${now:%Y-%m-%d}_${now:%H-%M-%S} #IE_${run.max_epochs}  -- use this name if you don't want the date, but instead the number of epochs
+debug: False
+seed: 1
+temperature: 0.01
+gibbs_samples: 100
+verbose: False
+ckpt_name: best_checkpoints.pt
+inverse_sign_1: True
+inverse_sign_2: False
+gradient_compose_method: linear # linear, pareto, pareto_moosvgd, pareto_pref_vec
+linear_weight_1: 0.5
+balance_weight_1: 1
+balance_weight_2: 1.0 # ratio: [336.18055706828255, 7254.063445232617, 12989.407044547266, 3787.549143456521, -inf, 13.305576006683518]
+lambd: 1.0
+weight_1: 1.0
+weight_2: 1.0
+lambda_method: lambda # alpha_lambda, lambda, 2_weight
+mutation_sites: [38, 39, 40, 53] # None means no limitations
+pref_index: 0 #[0, 4]
